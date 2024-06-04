@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express();
@@ -28,11 +29,23 @@ async function run() {
     const carsCollection = client
       .db('rabbikhalidhasan')
       .collection('carCollections');
+    const usedCarCollection = client
+      .db('rabbikhalidhasan')
+      .collection('usedCollection');
+    const userCollection = client
+      .db('rabbikhalidhasan')
+      .collection('allUserCollection');
 
     app.get('/cars', async (req, res) => {
       const cursor = carsCollection.find();
       const result = await cursor.toArray();
       res.send(result);
+    });
+
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
+      res.send(token);
     });
 
     app.get('/cars/:id', async (req, res) => {
@@ -49,6 +62,36 @@ async function run() {
         },
       };
       const result = await carsCollection.findOne(query, options);
+      res.send(result);
+    });
+
+    app.put('/cars/:id', async (req, res) => {
+      const id = req.params.id;
+      const car = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedCar = {
+        $set: {
+          title: car.title,
+          price: car.price,
+          make: car.make,
+          mileage: car.mileage,
+          description: car.description,
+        },
+      };
+      const result = await usedCarCollection.updateOne(
+        filter,
+        updatedCar,
+        options
+      );
+      res.send(result);
+    });
+
+    // delete a car
+    app.delete('/car/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await carsCollection.deleteOne(query);
       res.send(result);
     });
 
